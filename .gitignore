@@ -92,6 +92,7 @@ venv.bak/
 bin/
 pyvenv.cfg
 pip-selfcheck.json
+lib64
 
 # Spyder project settings
 .spyderproject
