@@ -1,4 +1,4 @@
-FROM python:3.5-alpine
+FROM dockerhub.cisco.com/iot-dockerpreprod/iot-alpine-images/iot-alpine-python3:3.4_3
 
 WORKDIR /usr/src/app
 
@@ -6,4 +6,4 @@ COPY requirements.txt monitor.py ./
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD [ "python", "./monitor.py" ]
+CMD [ "python3", "./monitor.py" ]

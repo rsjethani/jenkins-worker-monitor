@@ -16,7 +16,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 def make_node_online(jenkins_info):
     node = jenkins_info["node"]
     logging.info("trying to put node '{}' back online".format(node))
-    logging.info("connecting to jenkins server")
     server = jenkins.Jenkins(jenkins_info["url"], username=jenkins_info["user"], password=jenkins_info["pass"])
     server.get_version()
     server.enable_node(node)
@@ -27,7 +26,6 @@ def make_node_online(jenkins_info):
 def make_node_offline(jenkins_info):
     node = jenkins_info["node"]
     logging.info("checking node '{}' status".format(node))
-    logging.info("connecting to jenkins server")
     server = jenkins.Jenkins(jenkins_info["url"], username=jenkins_info["user"], password=jenkins_info["pass"])
     server.get_version()
     node_info = server.get_node_info(node)
@@ -43,7 +41,7 @@ def make_node_offline(jenkins_info):
 
 def cleanup_docker(docker_host_url, keep_images_until):
     logging.info("starting docker cleanup")
-    docker_client = docker.DockerClient(build_url=docker_host_url)
+    docker_client = docker.DockerClient(base_url=docker_host_url, version="1.25")
 
     byts = docker_client.containers.prune()["SpaceReclaimed"]
     logging.info("cleaned up stopped/stale containers, space reclaimed: {} bytes".format(byts))
@@ -81,7 +79,7 @@ def main():
     docker_keep_images_until = os.getenv("KEEP_IMAGES_UNTIL", "72")
     threshold = int(os.getenv("DISK_THRESHOLD", "70"))
     minutes = int(os.getenv("CHECK_INTERVAL", "5"))
-    jenkins_url = os.getenv("JENKINS_URL", "https://engci-private-sjc.cisco.com/jenkins/iotsp/"),
+    jenkins_url = os.getenv("JENKINS_URL", "https://engci-private-sjc.cisco.com/jenkins/iotsp/")
 
     try:
         node_name = os.environ["NODE_NAME"]
@@ -132,6 +130,8 @@ def main():
         logging.info("stopping")
     except Exception as e:
         logging.error(e)
+    finally:
+        make_node_online(jenkins_info)
 
 
 if __name__ == "__main__":
