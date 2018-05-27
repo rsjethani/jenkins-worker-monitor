@@ -100,9 +100,9 @@ def main():
     docker_root_dir = "/docker"
     workspace_root_dir = "/workspace"
 
-    try:
-        while True:
-            logging.info("***** checking disk usage *****")
+    while True:
+        logging.info("***** checking disk usage *****")
+        try:
             docker_usage_critical = check_disk_usage(docker_root_dir, threshold)
             workspace_usage_critical = check_disk_usage(workspace_root_dir, threshold)
             
@@ -126,12 +126,13 @@ def main():
 
             logging.info("***** checking again after {} minute(s) *****".format(minutes))
             time.sleep(minutes * 60)
-    except KeyboardInterrupt:
-        logging.info("stopping")
-    except Exception as e:
-        logging.error(e)
-    finally:
-        make_node_online(jenkins_info)
+        except KeyboardInterrupt:
+            logging.info("stopping")
+            break
+        except Exception as e:
+            logging.error(e)
+        finally:
+            make_node_online(jenkins_info)
 
 
 if __name__ == "__main__":
