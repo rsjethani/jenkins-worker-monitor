@@ -10,7 +10,25 @@ import time
 import logging
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(message)s")
+try:
+    JENKINS_USER = os.environ["JENKINS_USER"]
+    JENKINS_PASS = os.environ["JENKINS_PASS"]
+    JENKINS_NODE = os.environ["JENKINS_NODE"]
+except KeyError as e:
+    raise SystemExit("environment variable {} not found".format(e))
+
+
+JENKINS_URL = os.getenv("JENKINS_URL", "https://engci-private-sjc.cisco.com/jenkins/iotsp/")
+DISK_THRESHOLD = int(os.getenv("DISK_THRESHOLD", "70"))
+CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "5"))
+DOCKER_HOST_URL = os.getenv("DOCKER_HOST_URL", "unix://docker.sock")
+DOCKER_ROOT_DIR = os.getenv("DOCKER_ROOT_DIR", "/docker")
+DOCKER_KEEP_IMAGES_UNTIL = os.getenv("DOCKER_KEEP_IMAGES_UNTIL", "72"
+DOCKER_API_VERSION = os.getenv("DOCKER_API_VERSION", "1.30")
+WORKSPACE_ROOT_DIR = os.getenv("WORKSPACE_ROOT_DIR", "/workspace")
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(funcName)s : %(message)s")
 
 
 def make_node_online(jenkins_info):
@@ -102,15 +120,17 @@ def main():
 
     while True:
         logging.info("***** checking disk usage *****")
+
         try:
             docker_usage_critical = check_disk_usage(docker_root_dir, threshold)
             workspace_usage_critical = check_disk_usage(workspace_root_dir, threshold)
             
+            node_offline = False
             if docker_usage_critical or workspace_usage_critical:
                 logging.info("starting cleanup operations")
-                offline = make_node_offline(jenkins_info)
+                node_offline = make_node_offline(jenkins_info)
 
-                if offline:
+                if node_offline:
                     if docker_usage_critical:
                         cleanup_docker(docker_host_url, docker_keep_images_until)
                     if workspace_usage_critical:
@@ -120,19 +140,16 @@ def main():
                     check_disk_usage(docker_root_dir, threshold)
                     check_disk_usage(workspace_root_dir, threshold)
                     logging.info("finished all cleanup operations")
-                    make_node_online(jenkins_info)
                 else:
                     logging.warning("skipping cleanup")
 
-            logging.info("***** checking again after {} minute(s) *****".format(minutes))
-            time.sleep(minutes * 60)
-        except KeyboardInterrupt:
-            logging.info("stopping")
-            break
         except Exception as e:
             logging.error(e)
         finally:
-            make_node_online(jenkins_info)
+            if node_offline: make_node_online(jenkins_info)
+
+        logging.info("***** checking again after {} minute(s) *****".format(minutes))
+        time.sleep(minutes * 60)
 
 
 if __name__ == "__main__":
