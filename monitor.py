@@ -26,7 +26,7 @@ except ValueError as e:
 JENKINS_URL = os.getenv("JENKINS_URL", "https://engci-private-sjc.cisco.com/jenkins/iotsp/")
 DOCKER_HOST_URL = os.getenv("DOCKER_HOST_URL", "unix://docker.sock")
 DOCKER_ROOT_DIR = os.getenv("DOCKER_ROOT_DIR", "/docker")
-DOCKER_KEEP_IMAGES_UNTIL = os.getenv("DOCKER_KEEP_IMAGES_UNTIL", "72"
+DOCKER_KEEP_IMAGES_UNTIL = os.getenv("DOCKER_KEEP_IMAGES_UNTIL", "72")
 DOCKER_API_VERSION = os.getenv("DOCKER_API_VERSION", "1.30")
 WORKSPACE_ROOT_DIR = os.getenv("WORKSPACE_ROOT_DIR", "/workspace")
 
@@ -36,10 +36,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 
 ##### Configure handling of Ctrl+C(SIGINT) , docker stop(SIGTERM) signals #####
 def signal_handler(sigid, frame):
-    log.warning("SIGINT/SIGTERM signal received")
+    global STAGE
+    logging.warning("SIGINT/SIGTERM signal received")
     if STAGE >= 1:
-        log.warning("signal received during cleanup, aborting cleanup and putting node back online, the cleanup may not have completed properly")
+        logging.warning("signal received during cleanup, aborting cleanup and putting node back online, the cleanup may not have completed properly")
         make_node_online()
+    logging.info("exiting")
     raise SystemExit(sigid)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -81,7 +83,7 @@ def cleanup_docker():
     logging.info("cleaned up unused/dangling volumes, space reclaimed: {} bytes".format(byts))
 
     byts = docker_client.images.prune(filters={"dangling": False, "until": DOCKER_KEEP_IMAGES_UNTIL + "h"})["SpaceReclaimed"]
-    logging.info("cleaned up all dangling images and unused images(older than {} hours), space reclaimed: {} bytes".format(until, byts))
+    logging.info("cleaned up all dangling images and unused images(older than {} hours), space reclaimed: {} bytes".format(DOCKER_KEEP_IMAGES_UNTIL, byts))
 
     logging.info("finished docker cleanup")
 
@@ -108,6 +110,7 @@ def check_disk_usage(path):
 STAGE = 0
 
 def main():
+    global STAGE
     while True:
         STAGE = 0
         logging.info("***** checking disk usage *****")
